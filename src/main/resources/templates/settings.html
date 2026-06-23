@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>ตั้งค่า AI Provider</title>
+    <link rel="stylesheet" th:href="@{/css/settings.css}">
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <a href="/chat" class="back-btn">← กลับ</a>
+        <h1>ตั้งค่า AI Provider</h1>
+    </div>
+
+    <!-- รายการ provider ที่มีอยู่ -->
+    <div class="section">
+        <h2>Provider ที่ตั้งค่าไว้</h2>
+        <div th:if="${providers.empty}" class="empty">ยังไม่มี Provider เพิ่มด้านล่างได้เลย</div>
+        <table th:if="${!providers.empty}" class="provider-table">
+            <thead>
+                <tr>
+                    <th>ชื่อ</th>
+                    <th>Model</th>
+                    <th>API Key</th>
+                    <th>สถานะ</th>
+                    <th>จัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="p : ${providers}">
+                    <td th:text="${p.name}"></td>
+                    <td th:text="${p.model}"></td>
+                    <td th:text="${#strings.abbreviate(p.apiKey, 20)}"></td>
+                    <td>
+                        <span th:if="${p.active}" class="badge active">ใช้งานอยู่</span>
+                        <span th:unless="${p.active}" class="badge inactive">ไม่ได้ใช้</span>
+                    </td>
+                    <td class="actions">
+                        <form th:unless="${p.active}" th:action="@{/settings/activate/{id}(id=${p.id})}" method="post" style="display:inline">
+                            <button type="submit" class="btn-activate">เปิดใช้</button>
+                        </form>
+                        <form th:action="@{/settings/delete/{id}(id=${p.id})}" method="post" style="display:inline">
+                            <button type="submit" class="btn-delete" onclick="return confirm('ลบ provider นี้?')">ลบ</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- เพิ่ม provider ใหม่ -->
+    <div class="section">
+        <h2>เพิ่ม Provider ใหม่</h2>
+        <form th:action="@{/settings/save}" th:object="${newProvider}" method="post" class="provider-form">
+            <div class="form-row">
+                <label>Provider</label>
+                <select th:field="*{name}" id="providerSelect" onchange="updateModels()" required>
+                    <option value="">-- เลือก Provider --</option>
+                    <option value="claude">Claude (Anthropic)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Model</label>
+                <select th:field="*{model}" id="modelSelect" required>
+                    <option value="">-- เลือก Model --</option>
+                    <option value="claude-haiku-4-5-20251001">Claude Haiku</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>API Key</label>
+                <input type="password" th:field="*{apiKey}" placeholder="sk-ant-..." required>
+            </div>
+            <div class="form-row checkbox-row">
+                <label>
+                    <input type="checkbox" th:field="*{active}"> ใช้เป็น Provider หลัก
+                </label>
+            </div>
+            <button type="submit" class="btn-save">บันทึก</button>
+        </form>
+    </div>
+</div>
+
+
+<script th:src="@{/js/settings.js}"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Odoo AI Chat</title>
+    <link rel="stylesheet" th:href="@{/css/chat.css}">
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-logo">Odoo AI Chat</div>
+    <button class="new-chat-btn" onclick="newChat()">+ บทสนทนาใหม่</button>
+    <div class="sidebar-user">
+        <span id="username-display">กำลังโหลด...</span>
+        <a href="/logout" class="logout-link">ออกจากระบบ</a>
+    </div>
+</div>
+
+<div class="main">
+    <div class="topbar">
+        <a href="/settings" class="settings-btn" title="ตั้งค่า">⚙</a>
+    </div>
+    <div class="messages" id="messages">
+        <div class="empty-state" id="empty-state">
+            <h2>Odoo AI Chat</h2>
+            <p>ถามข้อมูลจาก Odoo เป็นภาษาไทยได้เลย</p>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-box">
+            <textarea id="question" rows="1" placeholder="พิมพ์คำถาม เช่น ลูกหนี้ค้างชำระเกิน 30 วันมีใครบ้าง"
+                onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">&#9650;</button>
+        </div>
+        <div class="input-hint">Enter เพื่อส่ง &nbsp;|&nbsp; Shift+Enter เพื่อขึ้นบรรทัดใหม่</div>
+    </div>
+</div>
+
+<script>
+    function handleKey(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+    }
+
+    function newChat() {
+        document.getElementById('messages').innerHTML = `
+            <div class="empty-state" id="empty-state">
+                <h2>Odoo AI Chat</h2>
+                <p>ถามข้อมูลจาก Odoo เป็นภาษาไทยได้เลย</p>
+            </div>`;
+    }
+
+    function appendMessage(role, content) {
+        const emptyState = document.getElementById('empty-state');
+        if (emptyState) emptyState.remove();
+
+        const label = role === 'user' ? 'คุณ' : 'AI';
+        const div = document.createElement('div');
+        div.className = `message ${role}`;
+        div.innerHTML = `<div class="message-label">${label}</div><div>${content}</div>`;
+        document.getElementById('messages').appendChild(div);
+        div.scrollIntoView({ behavior: 'smooth' });
+        return div;
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('question');
+        const question = input.value.trim();
+        if (!question) return;
+
+        input.value = '';
+        input.style.height = 'auto';
+        document.getElementById('send-btn').disabled = true;
+
+        appendMessage('user', question);
+
+        const loadingDiv = appendMessage('assistant',
+            '<div class="loading-dots"><span></span><span></span><span></span></div>');
+
+        try {
+            const res = await fetch('/api/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'question=' + encodeURIComponent(question)
+            });
+            const answer = await res.text();
+            loadingDiv.querySelector('div:last-child').textContent = answer;
+        } catch (err) {
+            loadingDiv.querySelector('div:last-child').textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+        }
+
+        document.getElementById('send-btn').disabled = false;
+        input.focus();
+    }
+</script>
+
+</body>
+</html>
