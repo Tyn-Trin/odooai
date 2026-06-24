@@ -2,3 +2,7 @@ trin.r@odoo365.co
 Basicteam@2026!
 
 lsof -ti:8080 | xargs kill -9 ; ./mvnw spring-boot:run
+
+
+git checkout feature/Add-Gemini-Grok
+git checkout main
