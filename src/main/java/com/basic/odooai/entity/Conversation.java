@@ -1,13 +1,14 @@
 package com.basic.odooai.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "chat_message")
-public class ChatMessage {
+@Table(name = "conversation")
+public class Conversation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,12 +16,11 @@ public class ChatMessage {
 
     private Long uid;
 
-    private Long conversationId;
+    private String title;
 
-    private String role;
-
-    @Column(columnDefinition = "TEXT")
-    private String content;
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private Boolean favourite = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -31,14 +31,11 @@ public class ChatMessage {
     public Long getUid() { return uid; }
     public void setUid(Long uid) { this.uid = uid; }
 
-    public Long getConversationId() { return conversationId; }
-    public void setConversationId(Long conversationId) { this.conversationId = conversationId; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    public boolean isFavourite() { return favourite != null && favourite; }
+    public void setFavourite(Boolean favourite) { this.favourite = favourite != null && favourite; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

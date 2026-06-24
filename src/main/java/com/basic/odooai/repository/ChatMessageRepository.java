@@ -7,5 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.basic.odooai.entity.ChatMessage;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
-    List<ChatMessage> findByUid(Long uid);
+    List<ChatMessage> findByConversationIdOrderByCreatedAtAsc(Long conversationId);
+    void deleteByConversationId(Long conversationId);
 }

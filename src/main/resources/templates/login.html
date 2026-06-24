@@ -2,32 +2,55 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>เข้าสู่ระบบ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ — Odoo AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 
-<div class="login-container">
-    <h2>Odoo AI Chat</h2>
-    <p>เข้าสู่ระบบด้วยบัญชี Odoo ของคุณ</p>
+<div class="login-wrap">
+    <div class="login-card">
+        <div class="login-logo">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white"/>
+                <path d="M2 17l10 5 10-5" stroke="white" stroke-width="1.5" fill="none"/>
+                <path d="M2 12l10 5 10-5" stroke="white" stroke-width="1.5" opacity="0.6" fill="none"/>
+            </svg>
+        </div>
 
-    <div th:if="${error}" class="error-message">
-        <p th:text="${error}"></p>
+        <h1>Odoo AI</h1>
+        <p>เข้าสู่ระบบด้วยบัญชี Odoo ของคุณ</p>
+
+        <div th:if="${param.error}" class="error-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>อีเมลหรือรหัสผ่านไม่ถูกต้อง</span>
+        </div>
+
+        <form method="post" action="/login">
+            <div class="form-group">
+                <label for="username">อีเมล</label>
+                <input type="email" id="username" name="username" placeholder="your@email.com" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">รหัสผ่าน</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <div class="remember-row">
+                <label class="remember-label">
+                    <input type="checkbox" name="remember-me"> จำฉันไว้ 30 วัน
+                </label>
+            </div>
+
+            <button type="submit">เข้าสู่ระบบ</button>
+        </form>
     </div>
-
-    <form method="post" action="/login">
-<div class="form-group">
-            <label>อีเมล</label>
-            <input type="email" name="username" required autofocus>
-        </div>
-
-        <div class="form-group">
-            <label>รหัสผ่าน</label>
-            <input type="password" name="password" required>
-        </div>
-
-        <button type="submit">เข้าสู่ระบบ</button>
-    </form>
 </div>
 
 </body>

@@ -1,84 +1,167 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f0f2f5;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #f7f7f8;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
 }
 
-.login-container {
+.login-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+}
+
+.login-card {
     background: white;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.1);
-    width: 360px;
-    text-align: center;
+    border: 1px solid #ece8ee;
+    border-radius: 18px;
+    padding: 44px 40px 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 8px 40px rgba(135,90,123,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.login-container h2 {
-    color: #1a73e8;
-    margin-bottom: 8px;
+/* Logo */
+.login-logo {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #875a7b, #6d4864);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(135,90,123,0.3);
 }
 
-.login-container p {
-    color: #666;
-    margin-bottom: 24px;
+.login-card h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.4px;
+    margin-bottom: 6px;
+}
+
+.login-card > p {
     font-size: 14px;
+    color: #aaa;
+    margin-bottom: 28px;
 }
 
-.form-group {
-    text-align: left;
+/* Error */
+.error-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fdf2f2;
+    border: 1px solid #f5c6c6;
+    color: #c0392b;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    width: 100%;
     margin-bottom: 16px;
 }
 
+/* Form */
+form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 .form-group label {
-    display: block;
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
 }
 
 .form-group input {
     width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
+    padding: 11px 14px;
+    border: 1.5px solid #e8e0ee;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-family: inherit;
+    color: #1a1a1a;
     outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: #fdfbfe;
 }
 
+.form-group input::placeholder { color: #ccc; }
+
 .form-group input:focus {
-    border-color: #1a73e8;
+    border-color: #875a7b;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(135,90,123,0.1);
+}
+
+.remember-row {
+    display: flex;
+    align-items: center;
+}
+
+.remember-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #777;
+    cursor: pointer;
+    user-select: none;
+}
+
+.remember-label input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #875a7b;
+    cursor: pointer;
+    border: none;
+    padding: 0;
 }
 
 button[type="submit"] {
     width: 100%;
     padding: 12px;
-    background: #1a73e8;
+    background: #875a7b;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
-    margin-top: 8px;
+    margin-top: 4px;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.1px;
 }
 
-button[type="submit"]:hover {
-    background: #1558b0;
-}
+button[type="submit"]:hover { background: #6d4864; }
+button[type="submit"]:active { background: #5c3d54; transform: scale(0.99); }
 
-.error-message {
-    background: #fce8e6;
-    color: #c5221f;
-    padding: 10px 14px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    font-size: 14px;
+/* ── Responsive ── */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 32px 24px 28px;
+        border-radius: 14px;
+    }
+
+    .login-card h1 { font-size: 20px; }
 }

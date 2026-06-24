@@ -47,6 +47,7 @@ public class OdooAuthService {
         session.setSessionId((String) result.get("session_id"));
         session.setUid(((Number) result.get("uid")).longValue());
         session.setUsername((String) result.get("name"));
+        session.setPassword(password);
 
         return session;
     }

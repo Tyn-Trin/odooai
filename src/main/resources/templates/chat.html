@@ -2,42 +2,344 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Odoo AI Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/chat.css}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
+<!-- Dropdown menu -->
+<div class="conv-dropdown" id="conv-dropdown">
+    <button onclick="doRename()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        เปลี่ยนชื่อ
+    </button>
+    <button id="fav-btn" onclick="doFavourite()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span id="fav-label">เพิ่มในรายการโปรด</span>
+    </button>
+</div>
+
+<!-- Modal logout -->
+<div class="modal-backdrop" id="logout-modal">
+    <div class="modal">
+        <p class="modal-title">ออกจากระบบ</p>
+        <p class="modal-desc">ต้องการออกจากระบบจริงหรือไม่?</p>
+        <div class="modal-actions">
+            <button class="modal-cancel" onclick="closeModal('logout-modal')">ยกเลิก</button>
+            <button class="modal-confirm" onclick="window.location.href='/logout'">ออกจากระบบ</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal delete แชท -->
+<div class="modal-backdrop" id="delete-modal">
+    <div class="modal">
+        <p class="modal-title">ลบบทสนทนา</p>
+        <p class="modal-desc">บทสนทนานี้จะถูกลบถาวรออกจากระบบ</p>
+        <div class="modal-actions">
+            <button class="modal-cancel" onclick="closeModal('delete-modal')">ยกเลิก</button>
+            <button class="modal-confirm danger" onclick="doDeleteConversation()">ลบ</button>
+        </div>
+    </div>
+</div>
+
 <div class="sidebar">
-    <div class="sidebar-logo">Odoo AI Chat</div>
-    <button class="new-chat-btn" onclick="newChat()">+ บทสนทนาใหม่</button>
+    <div class="sidebar-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#fff" opacity="0.9"/>
+            <path d="M2 17l10 5 10-5" stroke="#fff" stroke-width="1.5" stroke-opacity="0.7" fill="none"/>
+            <path d="M2 12l10 5 10-5" stroke="#fff" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+        </svg>
+        <span>Odoo AI</span>
+    </div>
+
+    <button class="new-chat-btn" onclick="newChat()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        บทสนทนาใหม่
+    </button>
+
+    <div class="conv-list" id="conv-list"></div>
+
     <div class="sidebar-user">
-        <span id="username-display">กำลังโหลด...</span>
-        <a href="/logout" class="logout-link">ออกจากระบบ</a>
+        <div class="user-avatar" id="user-initials">U</div>
+        <div class="user-info">
+            <span id="username-display" th:text="${username}">User</span>
+            <a href="#" class="logout-link" onclick="openModal('logout-modal')">ออกจากระบบ</a>
+        </div>
     </div>
 </div>
 
 <div class="main">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
     <div class="topbar">
-        <a href="/settings" class="settings-btn" title="ตั้งค่า">⚙</a>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button class="menu-btn" onclick="toggleSidebar()" title="เมนู">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+            <span class="topbar-title" id="topbar-title">Odoo AI Chat</span>
+        </div>
+        <a href="/settings" class="settings-btn" title="ตั้งค่า">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </a>
     </div>
+
     <div class="messages" id="messages">
         <div class="empty-state" id="empty-state">
+            <div class="empty-logo">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#875a7b" opacity="0.8"/>
+                    <path d="M2 17l10 5 10-5" stroke="#875a7b" stroke-width="1.5" fill="none"/>
+                    <path d="M2 12l10 5 10-5" stroke="#875a7b" stroke-width="1.5" opacity="0.5" fill="none"/>
+                </svg>
+            </div>
             <h2>Odoo AI Chat</h2>
             <p>ถามข้อมูลจาก Odoo เป็นภาษาไทยได้เลย</p>
+            <div class="chips">
+                <button class="chip" onclick="fillInput(this)">ลูกหนี้ค้างชำระเกิน 30 วันมีใครบ้าง</button>
+                <button class="chip" onclick="fillInput(this)">PO ที่รับสินค้าแล้วแต่ยังไม่ได้วาง bill</button>
+                <button class="chip" onclick="fillInput(this)">ยอดขายเดือนนี้เป็นเท่าไร</button>
+                <button class="chip" onclick="fillInput(this)">วันนี้เป็นไงบ้าง</button>
+            </div>
         </div>
     </div>
 
     <div class="input-area">
         <div class="input-box">
-            <textarea id="question" rows="1" placeholder="พิมพ์คำถาม เช่น ลูกหนี้ค้างชำระเกิน 30 วันมีใครบ้าง"
-                onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-            <button class="send-btn" id="send-btn" onclick="sendMessage()">&#9650;</button>
+            <textarea id="question" rows="1"
+                placeholder="พิมพ์คำถาม เช่น ลูกหนี้ค้างชำระเกิน 30 วันมีใครบ้าง"
+                onkeydown="handleKey(event)"
+                oninput="autoResize(this)"></textarea>
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
         </div>
-        <div class="input-hint">Enter เพื่อส่ง &nbsp;|&nbsp; Shift+Enter เพื่อขึ้นบรรทัดใหม่</div>
+        <div class="input-hint">Enter เพื่อส่ง &nbsp;·&nbsp; Shift+Enter ขึ้นบรรทัดใหม่</div>
     </div>
 </div>
 
 <script>
+    marked.setOptions({ breaks: true, gfm: true });
+
+    let currentConversationId = null;
+
+    let pendingDeleteId = null;
+    let activeMenuId = null;
+    let activeMenuFav = false;
+
+    function toggleMenu(e, id, isFav) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('conv-dropdown');
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+
+        if (activeMenuId === id && dropdown.classList.contains('show')) {
+            closeDropdown(); return;
+        }
+
+        activeMenuId = id;
+        activeMenuFav = isFav;
+        document.getElementById('fav-label').textContent = isFav ? 'นำออกจากรายการโปรด' : 'เพิ่มในรายการโปรด';
+
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.classList.add('show');
+    }
+
+    function closeDropdown() {
+        document.getElementById('conv-dropdown').classList.remove('show');
+        activeMenuId = null;
+    }
+
+    document.addEventListener('click', () => closeDropdown());
+
+    async function doRename() {
+        closeDropdown();
+        const row = document.querySelector(`.conv-row[data-id="${activeMenuId || pendingDeleteId}"]`)
+            || document.querySelector(`.conv-row[data-id="${activeMenuId}"]`);
+        if (!row) return;
+        const id = activeMenuId;
+        const titleEl = row.querySelector('.conv-title');
+        const oldTitle = titleEl.textContent;
+
+        const input = document.createElement('input');
+        input.className = 'conv-rename-input';
+        input.value = oldTitle;
+        titleEl.replaceWith(input);
+        input.focus();
+        input.select();
+
+        const save = async () => {
+            const newTitle = input.value.trim() || oldTitle;
+            const span = document.createElement('span');
+            span.className = 'conv-title';
+            span.textContent = newTitle;
+            input.replaceWith(span);
+            if (newTitle !== oldTitle) {
+                await fetch(`/api/conversations/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle })
+                });
+                if (currentConversationId === id)
+                    document.getElementById('topbar-title').textContent = newTitle;
+            }
+        };
+
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); save(); }
+            if (e.key === 'Escape') { input.replaceWith(Object.assign(document.createElement('span'), { className: 'conv-title', textContent: oldTitle })); }
+        });
+        input.addEventListener('blur', save);
+    }
+
+    async function doFavourite() {
+        const id = activeMenuId;
+        const newFav = !activeMenuFav;
+        closeDropdown();
+        await fetch(`/api/conversations/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ favourite: newFav })
+        });
+        await loadConversationList();
+    }
+
+    function openModal(id) {
+        document.getElementById(id).classList.add('show');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('show');
+    }
+
+    function askDeleteConversation(id) {
+        pendingDeleteId = id;
+        openModal('delete-modal');
+    }
+
+    async function doDeleteConversation() {
+        if (!pendingDeleteId) return;
+        closeModal('delete-modal');
+
+        await fetch(`/api/conversations/${pendingDeleteId}`, { method: 'DELETE' });
+
+        if (currentConversationId === pendingDeleteId) {
+            currentConversationId = null;
+            document.getElementById('topbar-title').textContent = 'Odoo AI Chat';
+            newChat();
+        }
+
+        pendingDeleteId = null;
+        await loadConversationList();
+    }
+
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.getElementById('sidebar-backdrop').classList.toggle('show');
+    }
+
+    function closeSidebar() {
+        document.querySelector('.sidebar').classList.remove('open');
+        document.getElementById('sidebar-backdrop').classList.remove('show');
+    }
+
+    // Set user initial
+    const nameEl = document.getElementById('username-display');
+    const initEl = document.getElementById('user-initials');
+    if (nameEl && initEl) {
+        initEl.textContent = nameEl.textContent.trim().charAt(0).toUpperCase() || 'U';
+    }
+
+    // โหลดรายการบทสนทนาตอน page load
+    loadConversationList();
+
+    async function loadConversationList() {
+        const res = await fetch('/api/conversations');
+        const convs = await res.json();
+        renderConversationList(convs);
+    }
+
+    function renderConversationList(convs) {
+        const list = document.getElementById('conv-list');
+        if (convs.length === 0) {
+            list.innerHTML = '';
+            return;
+        }
+        list.innerHTML = convs.map(c => `
+            <div class="conv-row ${c.id === currentConversationId ? 'active' : ''}" data-id="${c.id}">
+                <button class="conv-item" onclick="loadConversation(${c.id}, this)">
+                    ${c.favourite
+                        ? `<svg class="star-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+                        : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
+                    }
+                    <span class="conv-title">${escapeHtml(c.title)}</span>
+                </button>
+                <button class="conv-menu-btn" onclick="toggleMenu(event, ${c.id}, ${c.favourite})">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                    </svg>
+                </button>
+                <button class="conv-delete" onclick="askDeleteConversation(${c.id})" title="ลบ">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                </button>
+            </div>`).join('');
+    }
+
+    async function loadConversation(id, el) {
+        currentConversationId = id;
+        closeSidebar();
+
+        // active state
+        document.querySelectorAll('.conv-row').forEach(b => b.classList.remove('active'));
+        el.closest('.conv-row').classList.add('active');
+
+        // topbar title
+        document.getElementById('topbar-title').textContent = el.querySelector('span').textContent;
+
+        const res = await fetch(`/api/conversations/${id}/messages`);
+        const messages = await res.json();
+
+        const container = document.getElementById('messages');
+        container.innerHTML = '';
+
+        messages.forEach(msg => {
+            appendMessage(msg.role, msg.role === 'user'
+                ? escapeHtml(msg.content)
+                : marked.parse(msg.content));
+        });
+    }
+
+    function fillInput(el) {
+        const ta = document.getElementById('question');
+        ta.value = el.textContent;
+        autoResize(ta);
+        ta.focus();
+    }
+
     function handleKey(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -51,24 +353,53 @@
     }
 
     function newChat() {
+        currentConversationId = null;
+        document.getElementById('topbar-title').textContent = 'Odoo AI Chat';
+        document.querySelectorAll('.conv-item').forEach(b => b.classList.remove('active'));
         document.getElementById('messages').innerHTML = `
             <div class="empty-state" id="empty-state">
+                <div class="empty-logo">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#875a7b" opacity="0.8"/>
+                        <path d="M2 17l10 5 10-5" stroke="#875a7b" stroke-width="1.5" fill="none"/>
+                        <path d="M2 12l10 5 10-5" stroke="#875a7b" stroke-width="1.5" opacity="0.5" fill="none"/>
+                    </svg>
+                </div>
                 <h2>Odoo AI Chat</h2>
                 <p>ถามข้อมูลจาก Odoo เป็นภาษาไทยได้เลย</p>
+                <div class="chips">
+                    <button class="chip" onclick="fillInput(this)">ลูกหนี้ค้างชำระเกิน 30 วันมีใครบ้าง</button>
+                    <button class="chip" onclick="fillInput(this)">PO ที่รับสินค้าแล้วแต่ยังไม่ได้วาง bill</button>
+                    <button class="chip" onclick="fillInput(this)">ยอดขายเดือนนี้เป็นเท่าไร</button>
+                    <button class="chip" onclick="fillInput(this)">วันนี้เป็นไงบ้าง</button>
+                </div>
             </div>`;
     }
 
-    function appendMessage(role, content) {
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    function appendMessage(role, htmlContent) {
         const emptyState = document.getElementById('empty-state');
         if (emptyState) emptyState.remove();
 
-        const label = role === 'user' ? 'คุณ' : 'AI';
-        const div = document.createElement('div');
-        div.className = `message ${role}`;
-        div.innerHTML = `<div class="message-label">${label}</div><div>${content}</div>`;
-        document.getElementById('messages').appendChild(div);
-        div.scrollIntoView({ behavior: 'smooth' });
-        return div;
+        const wrap = document.createElement('div');
+        wrap.className = `msg-wrap ${role}`;
+
+        if (role === 'user') {
+            wrap.innerHTML = `<div class="msg-body">${htmlContent}</div>`;
+        } else {
+            wrap.innerHTML = `
+                <div class="msg-label label-ai">AI</div>
+                <div class="msg-body markdown">${htmlContent}</div>`;
+        }
+
+        document.getElementById('messages').appendChild(wrap);
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        return wrap;
     }
 
     async function sendMessage() {
@@ -80,27 +411,45 @@
         input.style.height = 'auto';
         document.getElementById('send-btn').disabled = true;
 
-        appendMessage('user', question);
+        appendMessage('user', escapeHtml(question));
 
-        const loadingDiv = appendMessage('assistant',
+        const aiWrap = appendMessage('assistant',
             '<div class="loading-dots"><span></span><span></span><span></span></div>');
+        const msgBody = aiWrap.querySelector('.msg-body');
 
         try {
+            const body = new URLSearchParams({ question });
+            if (currentConversationId) body.append('conversationId', currentConversationId);
+
             const res = await fetch('/api/ask', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'question=' + encodeURIComponent(question)
+                body: body.toString()
             });
-            const answer = await res.text();
-            loadingDiv.querySelector('div:last-child').textContent = answer;
-        } catch (err) {
-            loadingDiv.querySelector('div:last-child').textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+            const data = await res.json();
+
+            msgBody.innerHTML = marked.parse(data.answer);
+
+            // อัปเดต conversationId และ sidebar
+            if (!currentConversationId) {
+                currentConversationId = data.conversationId;
+                await loadConversationList();
+                // mark active
+                const newItem = document.querySelector(`[data-id="${currentConversationId}"]`);
+                if (newItem) {
+                    document.querySelectorAll('.conv-item').forEach(b => b.classList.remove('active'));
+                    newItem.classList.add('active');
+                    document.getElementById('topbar-title').textContent =
+                        newItem.querySelector('span').textContent;
+                }
+            }
+        } catch {
+            msgBody.textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
         }
 
         document.getElementById('send-btn').disabled = false;
         input.focus();
     }
 </script>
-
 </body>
 </html>
