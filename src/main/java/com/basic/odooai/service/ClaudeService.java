@@ -33,15 +33,15 @@ public class ClaudeService {
                 LocalDate lastOfLastMonth = firstOfThisMonth.minusDays(1);
                 DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 String dateContext = String.format(
-                        "วันที่ปัจจุบัน: %s\nเดือนนี้: %s ถึง %s\nเดือนที่แล้ว: %s ถึง %s\n\n",
-                        today.format(fmt),
-                        firstOfThisMonth.format(fmt), today.format(fmt),
-                        firstOfLastMonth.format(fmt), lastOfLastMonth.format(fmt));
+                                "วันที่ปัจจุบัน: %s\nเดือนนี้: %s ถึง %s\nเดือนที่แล้ว: %s ถึง %s\n\n",
+                                today.format(fmt),
+                                firstOfThisMonth.format(fmt), today.format(fmt),
+                                firstOfLastMonth.format(fmt), lastOfLastMonth.format(fmt));
                 return dateContext + SYSTEM_PROMPT_TEMPLATE;
         }
 
         private static final String SYSTEM_PROMPT_TEMPLATE = """
-                                                คุณคือผู้ช่วย AI สำหรับข้อมูลธุรกิจจากระบบ Odoo ตอบเป็นภาษาไทย ถ้าคำถามเป็นภาษาไทย ตอบภาษาอังกฤษ เมื่อคำถามเป็นภาษา อังกฤษ กระชับและชัดเจน
+                                                คุณคือผู้ช่วย AI สำหรับข้อมูลธุรกิจจากระบบ Odoo ตอบเป็นภาษาไทยเสมอ กระชับและชัดเจน
 
                         == กฎที่ห้ามละเมิดเด็ดขาด ==
                         1.ห้ามขอ password จาก user ไม่ว่ากรณีใดทั้งสิ้น
@@ -286,19 +286,29 @@ public class ClaudeService {
                         - สินค้าที่ qty_available <= 0 (หมดสต็อก)
                         - PO ที่ state=draft มานานเกิน 14 วัน (date_order < วันนี้ - 14 วัน)
 
-                        รูปแบบการตอบ CEO ให้ใช้แบบนี้เสมอ (ห้ามใช้ ## header หรือ emoji):
+                        รูปแบบการตอบ CEO ให้ใช้ Markdown แบบนี้เสมอ:
 
-                        เงิน
-                        ลูกหนี้ค้าง (>30 วัน): [จำนวนใบ] ใบ / [ยอดรวม] บาท
-                        เจ้าหนี้ครบกำหนดใน 7 วัน: [จำนวนใบ] ใบ / [ยอดรวม] บาท
-                        ยอดขายเดือนนี้: [ยอด] บาท
+                        ### สรุปธุรกิจ [ระบุเดือน/ช่วงเวลา]
 
-                        การขาย / การซื้อ
-                        SO ค้างส่ง: [จำนวน] ใบ
-                        PO รอวาง bill: [จำนวน] ใบ
+                        **เงิน**
 
-                        ต้องดูด่วน
-                        [แสดงเฉพาะประเด็นที่ผิดปกติจริงๆ ไม่เกิน 3 ข้อ]
+                        | รายการ | จำนวน | ยอดรวม |
+                        |:---|---:|---:|
+                        | ลูกหนี้ค้างชำระ | [X] ใบ | ฿[X,XXX,XXX] |
+                        | เจ้าหนี้รอจ่าย | [X] ใบ | ฿[X,XXX,XXX] |
+                        | ยอดขายเดือนนี้ | [X] invoice | ฿[X,XXX,XXX] |
+
+                        **การขาย / การซื้อ**
+
+                        | รายการ | จำนวน |
+                        |:---|---:|
+                        | SO ค้างส่งสินค้า | [X] ใบ |
+                        | PO รอวาง bill | [X] ใบ |
+
+                        **ต้องดูด่วน**
+
+                        - **[ประเด็น]** — [รายละเอียด]
+                        (แสดงเฉพาะประเด็นที่ผิดปกติจริงๆ ไม่เกิน 3 ข้อ ถ้าไม่มีให้ระบุว่า "ไม่พบความผิดปกติ")
 
                         ถามต่อได้ เช่น ลูกค้า top 5 / บิลค้างเกิน 30 วัน / SO ค้างนานสุด
 
@@ -533,7 +543,8 @@ public class ClaudeService {
                         """;
 
         public Optional<String> classifyIntent(String question) {
-                if (client == null) return Optional.empty();
+                if (client == null)
+                        return Optional.empty();
                 try {
                         MessageCreateParams params = MessageCreateParams.builder()
                                         .model(Model.of(cachedModel))
@@ -548,9 +559,10 @@ public class ClaudeService {
                                         .trim();
                         return switch (label) {
                                 case "CEO_OVERVIEW", "OVERDUE_AR", "RECEIVABLE", "MONTHLY_SALES",
-                                     "PO_PENDING_BILL", "AP_SUMMARY", "SO_PENDING_DELIVERY",
-                                     "TOP_CUSTOMERS", "STOCK_LOW", "PO_PENDING_RECEIPT",
-                                     "PAYMENT_RECEIVED", "EXPENSE_SUMMARY" -> Optional.of(label);
+                                                "PO_PENDING_BILL", "AP_SUMMARY", "SO_PENDING_DELIVERY",
+                                                "TOP_CUSTOMERS", "STOCK_LOW", "PO_PENDING_RECEIPT",
+                                                "PAYMENT_RECEIVED", "EXPENSE_SUMMARY" ->
+                                        Optional.of(label);
                                 default -> Optional.empty();
                         };
                 } catch (Exception e) {
@@ -559,7 +571,8 @@ public class ClaudeService {
         }
 
         public String askWithPreset(String question, String presetData) {
-                if (client == null) return "กรุณาตั้งค่า Claude API Key ในหน้า Settings ก่อนใช้งาน";
+                if (client == null)
+                        return "กรุณาตั้งค่า Claude API Key ในหน้า Settings ก่อนใช้งาน";
 
                 MessageCreateParams params = MessageCreateParams.builder()
                                 .model(Model.of(cachedModel))
