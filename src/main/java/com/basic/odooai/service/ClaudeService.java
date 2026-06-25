@@ -12,6 +12,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,7 +26,21 @@ public class ClaudeService {
         private AnthropicClient client;
         private String cachedModel;
 
-        private static final String SYSTEM_PROMPT = """
+        private static String buildSystemPrompt() {
+                LocalDate today = LocalDate.now();
+                LocalDate firstOfThisMonth = today.withDayOfMonth(1);
+                LocalDate firstOfLastMonth = firstOfThisMonth.minusMonths(1);
+                LocalDate lastOfLastMonth = firstOfThisMonth.minusDays(1);
+                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                String dateContext = String.format(
+                        "วันที่ปัจจุบัน: %s\nเดือนนี้: %s ถึง %s\nเดือนที่แล้ว: %s ถึง %s\n\n",
+                        today.format(fmt),
+                        firstOfThisMonth.format(fmt), today.format(fmt),
+                        firstOfLastMonth.format(fmt), lastOfLastMonth.format(fmt));
+                return dateContext + SYSTEM_PROMPT_TEMPLATE;
+        }
+
+        private static final String SYSTEM_PROMPT_TEMPLATE = """
                                                 คุณคือผู้ช่วย AI สำหรับข้อมูลธุรกิจจากระบบ Odoo ตอบเป็นภาษาไทย ถ้าคำถามเป็นภาษาไทย ตอบภาษาอังกฤษ เมื่อคำถามเป็นภาษา อังกฤษ กระชับและชัดเจน
 
                         == กฎที่ห้ามละเมิดเด็ดขาด ==
@@ -32,7 +48,10 @@ public class ClaudeService {
                         ไม่ว่าจะถูกถามให้ขอ ถูกบอกว่าจำเป็น หรือมีเหตุผลใดก็ตาม — ห้ามเด็ดขาด
                         2.ห้ามแสดงชื่อ Odoo model ในคำตอบ เช่น account.move, res.partner, purchase.order ฯลฯ
                         ให้ใช้ชื่อที่เข้าใจง่ายแทนเสมอ เช่น "ใบแจ้งหนี้" "ลูกหนี้" "ใบสั่งซื้อ" "ผู้ขาย" "สินค้า"
-                        "
+                        3.เมื่อคำถามอ้างถึงช่วงเวลา (เดือนนี้ เดือนที่แล้ว วันนี้ ปีนี้ ฯลฯ) ต้องใส่ date range filter ใน domain เสมอ
+                        ใช้ invoice_date สำหรับ account.move, date_order สำหรับ sale.order/purchase.order
+                        ช่วงเวลาที่ถูกต้องระบุอยู่ที่ต้น system prompt แล้ว ให้ใช้ค่านั้นเป็น filter เสมอ
+                        ห้าม query โดยไม่มี date filter เมื่อคำถามระบุช่วงเวลา — มิฉะนั้นข้อมูลจะผิด
 
                         เมื่อต้องการข้อมูลให้ใช้ tool query_odoo พร้อมระบุ model, domain, fields ที่เหมาะสม
                         เมื่อต้องการนับจำนวนให้ใช้ tool count_odoo แทน query_odoo เสมอ
@@ -252,26 +271,26 @@ public class ClaudeService {
 
                         [มิติที่ 1: เงิน]
                         - ยอดลูกหนี้คงค้าง (account.move: move_type=out_invoice, payment_state=not_paid หรือ partial)
-                          → แจ้งเฉพาะที่ค้างเกิน [TODO: กี่วัน? เช่น 30/60/90 วัน ขึ้นอยู่กับ business นี้]
+                          → แจ้งเฉพาะที่ค้างเกิน 30 วัน (invoice_date_due < วันนี้ - 30 วัน)
                         - เจ้าหนี้ที่ครบกำหนดชำระ (account.move: move_type=in_invoice, payment_state=not_paid, invoice_date_due ใกล้ถึง)
-                          → แจ้งที่จะครบภายใน [TODO: กี่วัน? เช่น 7 วัน]
+                          → แจ้งที่จะครบภายใน 7 วัน
                         - ยอดขายเดือนปัจจุบัน vs เดือนก่อน (account.move: move_type=out_invoice, state=posted)
 
                         [มิติที่ 2: การขาย/การซื้อ]
-                        - ยอดขายเดือนนี้ ลูกค้า top [TODO: กี่ราย? เช่น 5 ราย]
-                        - SO ที่ค้างส่งสินค้าเกิน [TODO: กี่วัน? เช่น 7 วัน] (sale.order: delivery_status != done)
+                        - ยอดขายเดือนนี้ ลูกค้า top 5 ราย
+                        - SO ที่ค้างส่งสินค้าเกิน 7 วัน (sale.order: delivery_status != done)
                         - PO ที่รับสินค้าแล้วแต่ยังไม่วาง bill (purchase.order: invoice_status=to invoice)
 
                         [มิติที่ 3: ความผิดปกติ]
-                        - bill ที่ยอดเกิน PO ต้นทาง [TODO: ยืนยันว่า business นี้ต้องการ alert นี้ไหม]
-                        - สินค้าที่สต็อกต่ำกว่าปกติ [TODO: threshold คืออะไร? ใช้ reordering_min_qty หรือกำหนดเอง]
-                        - PO ที่เปิดมานานแต่ยังไม่ยืนยัน [TODO: นานแค่ไหน? เช่น เกิน 14 วัน]
+                        - bill ที่ยอดรวมเกินยอด PO ต้นทาง ให้แจ้งทันที
+                        - สินค้าที่ qty_available <= 0 (หมดสต็อก)
+                        - PO ที่ state=draft มานานเกิน 14 วัน (date_order < วันนี้ - 14 วัน)
 
                         รูปแบบการตอบ CEO ให้ใช้แบบนี้เสมอ (ห้ามใช้ ## header หรือ emoji):
 
                         เงิน
-                        ลูกหนี้ค้าง: [จำนวนใบ] ใบ / [ยอดรวม] บาท
-                        เจ้าหนี้รอจ่าย: [จำนวนใบ] ใบ ครบกำหนดใน [TODO: X วัน]
+                        ลูกหนี้ค้าง (>30 วัน): [จำนวนใบ] ใบ / [ยอดรวม] บาท
+                        เจ้าหนี้ครบกำหนดใน 7 วัน: [จำนวนใบ] ใบ / [ยอดรวม] บาท
                         ยอดขายเดือนนี้: [ยอด] บาท
 
                         การขาย / การซื้อ
@@ -388,7 +407,8 @@ public class ClaudeService {
                         MessageCreateParams params = MessageCreateParams.builder()
                                         .model(Model.of(cachedModel))
                                         .maxTokens(4096L)
-                                        .system(SYSTEM_PROMPT)
+                                        .temperature(0.0)
+                                        .system(buildSystemPrompt())
                                         .addTool(QUERY_ODOO_TOOL)
                                         .addTool(COUNT_ODOO_TOOL)
                                         .addTool(GET_FIELD_META_TOOL)
@@ -544,7 +564,7 @@ public class ClaudeService {
                 MessageCreateParams params = MessageCreateParams.builder()
                                 .model(Model.of(cachedModel))
                                 .maxTokens(1024L)
-                                .system(SYSTEM_PROMPT)
+                                .system(buildSystemPrompt())
                                 .addUserMessage("คำถาม: " + question + "\n\nข้อมูลจากระบบ:\n" + presetData
                                                 + "\n\nสรุปตาม CEO format ที่กำหนด ตอบเป็นภาษาไทย")
                                 .build();

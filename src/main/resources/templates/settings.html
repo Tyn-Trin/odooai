@@ -2,86 +2,130 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>ตั้งค่า AI Provider</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่า AI Provider — Odoo AI</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/settings.css}">
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <a href="/chat" class="back-btn">← กลับ</a>
-        <h1>ตั้งค่า AI Provider</h1>
+<div class="page">
+
+    <!-- Topbar -->
+    <div class="topbar">
+        <a href="/chat" class="back-btn">
+            <i data-lucide="arrow-left" style="width:16px;height:16px;stroke-width:2.5"></i>
+            กลับ
+        </a>
+        <div class="topbar-center">
+            <div class="topbar-logo">
+                <i data-lucide="bot" style="width:14px;height:14px;stroke-width:2;stroke:#fff"></i>
+            </div>
+            <span class="topbar-title">ตั้งค่า AI Provider</span>
+        </div>
+        <div style="width:72px"></div>
     </div>
 
-    <!-- รายการ provider ที่มีอยู่ -->
-    <div class="section">
-        <h2>Provider ที่ตั้งค่าไว้</h2>
-        <div th:if="${providers.empty}" class="empty">ยังไม่มี Provider เพิ่มด้านล่างได้เลย</div>
-        <table th:if="${!providers.empty}" class="provider-table">
-            <thead>
-                <tr>
-                    <th>ชื่อ</th>
-                    <th>Model</th>
-                    <th>API Key</th>
-                    <th>สถานะ</th>
-                    <th>จัดการ</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="p : ${providers}">
-                    <td th:text="${p.name}"></td>
-                    <td th:text="${p.model}"></td>
-                    <td th:text="${#strings.abbreviate(p.apiKey, 20)}"></td>
-                    <td>
-                        <span th:if="${p.active}" class="badge active">ใช้งานอยู่</span>
+    <div class="container">
+
+        <!-- Section: provider ที่มีอยู่ -->
+        <div class="section">
+            <div class="section-header">
+                <i data-lucide="layers" style="width:16px;height:16px;stroke-width:2;stroke:#22c55e"></i>
+                <h2>Provider ที่ตั้งค่าไว้</h2>
+            </div>
+
+            <div th:if="${providers.empty}" class="empty">
+                <i data-lucide="inbox" style="width:32px;height:32px;stroke-width:1.5;stroke:#94a3b8"></i>
+                <p>ยังไม่มี Provider — เพิ่มด้านล่างได้เลย</p>
+            </div>
+
+            <div th:if="${!providers.empty}" class="provider-list">
+                <div th:each="p : ${providers}" class="provider-row">
+                    <div class="provider-info">
+                        <div class="provider-name" th:text="${p.name}"></div>
+                        <div class="provider-meta">
+                            <span class="meta-tag"><i data-lucide="cpu" style="width:11px;height:11px;stroke-width:2"></i> <span th:text="${p.model}"></span></span>
+                            <span class="meta-tag"><i data-lucide="key" style="width:11px;height:11px;stroke-width:2"></i> <span th:text="${#strings.abbreviate(p.apiKey, 20)}"></span></span>
+                        </div>
+                    </div>
+                    <div class="provider-actions">
+                        <span th:if="${p.active}" class="badge active">
+                            <i data-lucide="check-circle" style="width:11px;height:11px;stroke-width:2.5"></i> ใช้งานอยู่
+                        </span>
                         <span th:unless="${p.active}" class="badge inactive">ไม่ได้ใช้</span>
-                    </td>
-                    <td class="actions">
                         <form th:unless="${p.active}" th:action="@{/settings/activate/{id}(id=${p.id})}" method="post" style="display:inline">
                             <button type="submit" class="btn-activate">เปิดใช้</button>
                         </form>
                         <form th:action="@{/settings/delete/{id}(id=${p.id})}" method="post" style="display:inline">
-                            <button type="submit" class="btn-delete" onclick="return confirm('ลบ provider นี้?')">ลบ</button>
+                            <button type="submit" class="btn-delete" onclick="return confirm('ลบ provider นี้?')">
+                                <i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2"></i>
+                            </button>
                         </form>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- เพิ่ม provider ใหม่ -->
-    <div class="section">
-        <h2>เพิ่ม Provider ใหม่</h2>
-        <form th:action="@{/settings/save}" th:object="${newProvider}" method="post" class="provider-form">
-            <div class="form-row">
-                <label>Provider</label>
-                <select th:field="*{name}" id="providerSelect" onchange="updateModels()" required>
-                    <option value="">-- เลือก Provider --</option>
-                    <option value="claude">Claude (Anthropic)</option>
-                </select>
+        <!-- Section: เพิ่ม provider ใหม่ -->
+        <div class="section">
+            <div class="section-header">
+                <i data-lucide="plus-circle" style="width:16px;height:16px;stroke-width:2;stroke:#22c55e"></i>
+                <h2>เพิ่ม Provider ใหม่</h2>
             </div>
-            <div class="form-row">
-                <label>Model</label>
-                <select th:field="*{model}" id="modelSelect" required>
-                    <option value="">-- เลือก Model --</option>
-                    <option value="claude-haiku-4-5-20251001">Claude Haiku</option>
-                </select>
-            </div>
-            <div class="form-row">
-                <label>API Key</label>
-                <input type="password" th:field="*{apiKey}" placeholder="sk-ant-..." required>
-            </div>
-            <div class="form-row checkbox-row">
-                <label>
-                    <input type="checkbox" th:field="*{active}"> ใช้เป็น Provider หลัก
-                </label>
-            </div>
-            <button type="submit" class="btn-save">บันทึก</button>
-        </form>
+
+            <form th:action="@{/settings/save}" th:object="${newProvider}" method="post" class="provider-form">
+                <div class="form-row">
+                    <label>Provider</label>
+                    <div class="select-wrap">
+                        <i data-lucide="zap" class="select-icon"></i>
+                        <select th:field="*{name}" id="providerSelect" onchange="updateModels()" required>
+                            <option value="">— เลือก Provider —</option>
+                            <option value="claude">Claude (Anthropic)</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-chevron"></i>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label>Model</label>
+                    <div class="select-wrap">
+                        <i data-lucide="cpu" class="select-icon"></i>
+                        <select th:field="*{model}" id="modelSelect" required>
+                            <option value="">— เลือก Model —</option>
+                            <option value="claude-haiku-4-5-20251001">Claude Haiku</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-chevron"></i>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label>API Key</label>
+                    <div class="input-wrap">
+                        <i data-lucide="key" class="input-icon"></i>
+                        <input type="password" th:field="*{apiKey}" placeholder="sk-ant-..." required>
+                    </div>
+                </div>
+
+                <div class="form-row checkbox-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" th:field="*{active}">
+                        <span>ใช้เป็น Provider หลักทันที</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-save">
+                    <i data-lucide="save" style="width:15px;height:15px;stroke-width:2.5"></i>
+                    บันทึก
+                </button>
+            </form>
+        </div>
+
     </div>
 </div>
 
-
 <script th:src="@{/js/settings.js}"></script>
+<script>lucide.createIcons();</script>
 </body>
 </html>
